@@ -38,6 +38,17 @@ chmod +x /usr/local/bin/docker-compose
 # docker swarm init
 
 
+# GlusterFS
+apt-get install glusterfs-server glusterfs-client -y
+systemctl enable glusterfs-server
+mkdir -p /gluster/brick 
+ufw allow 24007/tcp
+ufw allow 24008/tcp
+ufw allow 49152/tcp # /gluster/brick
+# portmapper
+ufw allow 111/tcp
+ufw allow 111/udp
+
 # /etc/hosts
 echo "37.187.120.21  node1" >> /etc/hosts
 echo "37.187.121.185 node2" >> /etc/hosts
