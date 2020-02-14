@@ -50,5 +50,20 @@ ufw allow 111/tcp
 ufw allow 111/udp
 
 # /etc/hosts
-echo "37.187.120.21  node1" >> /etc/hosts
-echo "37.187.121.185 node2" >> /etc/hosts
+hostname="$(cat /etc/hosts | grep '127.0.1.1' | awk '{print $3}')" 
+public_ip="$(cat /etc/hosts | grep -v '127.0.1.1' |grep "$hostname" | awk '{print $1}')" 
+
+declare -A nodes
+nodes[node1]='37.187.120.21'
+nodes[node2]='37.187.121.185'
+
+for node_name in "${!nodes[@]}"
+do
+    sed -i "/$node_name/d" /etc/hosts
+    if [ "${nodes[$node_name]}" == "$public_ip" ]; then
+        # https://serverfault.com/questions/531359/why-cant-i-create-this-gluster-volume#531385
+        echo -e "127.0.0.1\t$node_name" >> /etc/hosts
+    else       
+        echo -e "${nodes[$node_name]}\t$node_name" >> /etc/hosts
+    fi
+done
