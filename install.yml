@@ -1,10 +1,110 @@
 # https://github.com/geerlingguy/ansible-role-docker
 - hosts: all
-
+  vars:
+    # firewall_disable_firewalld: true
+    # firewall_disable_ufw: true
+    firewall_allowed_tcp_ports:
+      - "22"   # ssh
+      - "80"   # http
+      - "443"  # https
+      - "2376" # docker
+      - "2377" # docker
+      - "7946" # docker container network discovery tcp
+      - "24007" # glusterfs
+      - "24008" # glusterfs
+      - "49152" # glusterfs: /gluster/brick
+      - "111"   # glusterfs: portmapper
+    firewall_allowed_udp_ports:
+      - "111"   # glusterfs: portmapper
+      - "7946"  # docker container network discovery udp
+      - "4789"  # docker container ingress network
+  roles:
+    - geerlingguy.firewall
+  tags:
+    - firewall
+    
+- hosts: swarm
   vars:
     pip_install_packages:
       - name: docker
-
   roles:
     - geerlingguy.pip
     - geerlingguy.docker
+  tags:
+    - swarm
+
+- hosts: swarm_managers
+  roles:
+    - grycap.swarm
+    # - { role: 'grycap.swarm', swarn_type_of_node: 'wn', swarn_manager_address: hostvars[host]['ansible_ssh_host'] }
+  tags:
+    - swarm
+    - swarm-start
+
+# - hosts: localhost
+  # connection: local
+  # tasks:
+    # - debug: var=ansible_all_ipv4_addresses
+    # - debug: var=ansible_default_ipv4.address
+  # tags:
+    # - test
+    
+- hosts: gluster
+  tasks:
+    - name: Add hosts from inventory to /etc/hosts
+      tags:
+        - hosts
+      blockinfile:
+        path: /etc/hosts
+        block: |
+          {% for host in groups['all'] %}
+          {% if hostvars[host]['ansible_ssh_host'] == ansible_default_ipv4.address %}
+          127.0.0.1 {{ host }}
+          {% else %}
+          {{ hostvars[host]['ansible_ssh_host'] }} {{ host }}
+          {% endif %}
+          {% endfor %}
+
+- hosts: gluster
+  tags:
+    - gluster
+  roles:
+    - geerlingguy.glusterfs
+  vars:
+    gluster_mount_dir: /mnt/gluster
+    gluster_brick_dir: /srv/gluster/brick
+    gluster_brick_name: swarm-shared-volume
+  tasks:
+    - name: Ensure Gluster brick and mount directories exist.
+      file: "path={{ item }} state=directory mode=0775"
+      with_items:
+        - "{{ gluster_brick_dir }}"
+        - "{{ gluster_mount_dir }}"
+
+    - name: Configure Gluster volume.
+      debugger: on_failed
+      gluster_volume:
+        state: present
+        name: "{{ gluster_brick_name }}"
+        brick: "{{ gluster_brick_dir }}"
+        replicas: 2
+        cluster: "{{ groups.gluster | join(',') }}"
+        host: "{{ inventory_hostname }}"
+        force: yes
+      run_once: true
+
+    - name: Ensure Gluster volume is mounted.
+      mount:
+        name: "{{ gluster_mount_dir }}"
+        src: "{{ inventory_hostname }}:/{{ gluster_brick_name }}"
+        fstype: glusterfs
+        opts: "defaults,_netdev"
+        state: mounted
+
+# Local mount
+# umount /mnt
+# chown -R username /etc/fstab /mnt
+# chown -R username /mnt 
+# echo 'localhost:/swarm-gfs /mnt glusterfs defaults,_netdev,backupvolfile-server=localhost 0 0' >> /etc/fstab 
+# mount.glusterfs localhost:/swarm-gfs /mnt 
+# chown -R username:docker /mnt
