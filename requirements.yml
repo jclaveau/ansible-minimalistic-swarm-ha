@@ -1,0 +1,7 @@
+# https://zaiste.net/automatically_install_ansible_galaxy_roles_with_requirements_yml/
+# ansible-galaxy install -r requirements.yml 
+ - src: geerlingguy.firewall
+ - src: geerlingguy.glusterfs
+ - src: geerlingguy.pip
+ - src: geerlingguy.docker
+ - src: grycap.swarm
