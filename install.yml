@@ -121,3 +121,24 @@
 # echo 'localhost:/swarm-gfs /mnt glusterfs defaults,_netdev,backupvolfile-server=localhost 0 0' >> /etc/fstab 
 # mount.glusterfs localhost:/swarm-gfs /mnt 
 # chown -R username:docker /mnt
+
+- hosts: gluster
+  tags:
+    - traefik
+  tasks:
+    - name: Create traefik stack configuration directory
+      file:
+        path: /docker/traefik
+        state: directory
+        mode: '0755'
+    - name: Send docker-compose.yml
+      copy:
+        src: ./docker/traefik/docker-compose.yml
+        dest: /docker/traefik/docker-compose.yml
+    - name: Deploy traefik
+      docker_stack:
+        state: present
+        name: traefik
+        compose:
+          - /docker/traefik/docker-compose.yml
+      run_once: true
