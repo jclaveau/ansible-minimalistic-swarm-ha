@@ -4,4 +4,5 @@
  - src: geerlingguy.glusterfs
  - src: geerlingguy.pip
  - src: geerlingguy.docker
- - src: grycap.swarm
+ # - src: grycap.swarm
+ - src: jclaveau.swarm

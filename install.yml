@@ -6,6 +6,7 @@
     firewall_allowed_tcp_ports:
       - "22"   # ssh
       - "80"   # http
+      - "8080" # traefik webui
       - "443"  # https
       - "2376" # docker
       - "2377" # docker
@@ -28,15 +29,27 @@
     pip_install_packages:
       - name: docker
   roles:
-    - geerlingguy.pip
+    - geerlingguy.pip # used to build docker images (need update?)
     - geerlingguy.docker
   tags:
-    - swarm
+    - swarm-install
 
 - hosts: swarm_managers
+  vars:
+    swarm_type_of_node: manager
+    swarm_leader_address: "{{ hostvars[groups['swarm_managers'][0]]['ansible_ssh_host'] }}"
   roles:
-    - grycap.swarm
-    # - { role: 'grycap.swarm', swarn_type_of_node: 'wn', swarn_manager_address: hostvars[host]['ansible_ssh_host'] }
+    - jclaveau.swarm
+  tags:
+    - swarm
+    - swarm-start
+
+- hosts: swarm_workers
+  vars:
+    swarm_type_of_node: worker
+    swarm_leader_address: "{{ hostvars['manager1']['ansible_ssh_host'] }}"
+  roles:
+    - jclaveau.swarm
   tags:
     - swarm
     - swarm-start
