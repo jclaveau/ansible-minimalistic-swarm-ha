@@ -15,10 +15,15 @@
       - "24008" # glusterfs
       - "49152" # glusterfs: /gluster/brick
       - "111"   # glusterfs: portmapper
+      - "3306"   # mysql
+      # - "4567"   # galera
+      # - "4568"   # galera
+      # - "4444"   # galera
     firewall_allowed_udp_ports:
       - "111"   # glusterfs: portmapper
       - "7946"  # docker container network discovery udp
       - "4789"  # docker container ingress network
+      # - "4567"  # galera in case of for multicast
   roles:
     - geerlingguy.firewall
   tags:
@@ -138,7 +143,28 @@
     - name: Deploy traefik
       docker_stack:
         state: present
-        name: traefik
+        name: infrastructure
         compose:
           - /docker/traefik/docker-compose.yml
+      run_once: true
+
+- hosts: gluster
+  tags:
+    - etcd
+  tasks:
+    - name: Create Etcd stack configuration directory
+      file:
+        path: /docker/etcd
+        state: directory
+        mode: '0755'
+    - name: Send docker-compose.yml
+      copy:
+        src: ./docker/bitnami-docker-etcd/docker-compose-cluster.yml
+        dest: /docker/etcd/docker-compose.yml
+    - name: Deploy Etcd
+      docker_stack:
+        state: present
+        name: infrastructure
+        compose:
+          - /docker/etcd/docker-compose.yml
       run_once: true

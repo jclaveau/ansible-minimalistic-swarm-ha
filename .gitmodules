@@ -1,0 +1,3 @@
+[submodule "docker/bitnami-docker-etcd"]
+	path = docker/bitnami-docker-etcd
+	url = git@github.com:bitnami/bitnami-docker-etcd.git
