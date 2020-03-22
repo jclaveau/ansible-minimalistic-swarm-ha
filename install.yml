@@ -131,11 +131,10 @@
   tags:
     - traefik
   tasks:
-    - name: Create traefik stack configuration directory
-      file:
-        path: /docker/traefik
-        state: directory
-        mode: '0755'
+    - name: Create Traefik's network (docker_network doesn't work with swarm)
+      shell: docker network create -d overlay traefik-public
+      run_once: true
+      when: 
     - name: Send docker-compose.yml
       copy:
         src: ./docker/traefik/docker-compose.yml
@@ -147,6 +146,13 @@
         compose:
           - /docker/traefik/docker-compose.yml
       run_once: true
+      environment:
+        DOMAIN: ***
+        USERNAME: ***
+        EMAIL: ***
+        HASHED_PASSWORD: ***** # export HASHED_PASSWORD=$(openssl passwd -apr1 $PASSWORD)
+        CONSUL_REPLICAS: 2
+        TRAEFIK_REPLICAS: 2
 
 - hosts: gluster
   tags:
