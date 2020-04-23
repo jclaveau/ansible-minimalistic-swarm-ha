@@ -6,6 +6,7 @@
     firewall_allowed_tcp_ports:
       - "22"   # ssh
       - "80"   # http
+      - "9090" # cockpit
       - "8080" # traefik webui
       - "443"  # https
       - "2376" # docker
@@ -29,6 +30,25 @@
   tags:
     - firewall
     
+- hosts: all
+  tags:
+    - cockpit
+  tasks:
+    - name: ensure packages are installed
+      package:
+        name: "{{ item }}"
+      with_items:
+        - cockpit
+        - cockpit-docker
+        # - cockpit-machines
+        - cockpit-pcp
+
+    - name: ensure service is running
+      service:
+        name: cockpit
+        enabled: yes
+        state: started
+
 - hosts: swarm
   vars:
     pip_install_packages:
