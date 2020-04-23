@@ -17,6 +17,7 @@
       - "49152" # glusterfs: /gluster/brick
       - "111"   # glusterfs: portmapper
       - "3306"   # mysql
+      - "9000"   # portainer
       # - "4567"   # galera
       # - "4568"   # galera
       # - "4444"   # galera
@@ -82,7 +83,7 @@
 - hosts: swarm_managers
   vars:
     swarm_type_of_node: manager
-    swarm_leader_address: "{{ hostvars[groups['swarm_managers'][0]]['ansible_ssh_host'] }}"
+    swarm_leader_address: "{{ hostvars[groups['swarm_managers'][0]]['ansible_host'] }}"
   roles:
     - jclaveau.swarm
   tags:
@@ -92,7 +93,7 @@
 - hosts: swarm_workers
   vars:
     swarm_type_of_node: worker
-    swarm_leader_address: "{{ hostvars['manager1']['ansible_ssh_host'] }}"
+    swarm_leader_address: "{{ hostvars['manager1']['ansible_host'] }}"
   roles:
     - jclaveau.swarm
   tags:
@@ -116,10 +117,10 @@
         path: /etc/hosts
         block: |
           {% for host in groups['all'] %}
-          {% if hostvars[host]['ansible_ssh_host'] == ansible_default_ipv4.address %}
+          {% if hostvars[host]['ansible_host'] == ansible_default_ipv4.address %}
           127.0.0.1 {{ host }}
           {% else %}
-          {{ hostvars[host]['ansible_ssh_host'] }} {{ host }}
+          {{ hostvars[host]['ansible_host'] }} {{ host }}
           {% endif %}
           {% endfor %}
 
@@ -193,24 +194,3 @@
         HASHED_PASSWORD: ***** # export HASHED_PASSWORD=$(openssl passwd -apr1 $PASSWORD)
         CONSUL_REPLICAS: 2
         TRAEFIK_REPLICAS: 2
-
-- hosts: gluster
-  tags:
-    - etcd
-  tasks:
-    - name: Create Etcd stack configuration directory
-      file:
-        path: /docker/etcd
-        state: directory
-        mode: '0755'
-    - name: Send docker-compose.yml
-      copy:
-        src: ./docker/bitnami-docker-etcd/docker-compose-cluster.yml
-        dest: /docker/etcd/docker-compose.yml
-    - name: Deploy Etcd
-      docker_stack:
-        state: present
-        name: infrastructure
-        compose:
-          - /docker/etcd/docker-compose.yml
-      run_once: true
