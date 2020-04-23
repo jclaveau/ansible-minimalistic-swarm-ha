@@ -32,9 +32,30 @@
     
 - hosts: all
   tags:
+    - tools
+  tasks:
+    - name: Install common tools
+      package:
+        name: "{{ item }}"
+      with_items:
+        - ca-certificates
+        - software-properties-common
+        - gnupg
+        - net-tools
+        - nmap
+        - locate
+        - nano
+        - htop
+        - wget
+        - curl
+        - unzip
+        - zip
+
+- hosts: all
+  tags:
     - cockpit
   tasks:
-    - name: ensure packages are installed
+    - name: Install Cockpit packages
       package:
         name: "{{ item }}"
       with_items:
@@ -42,8 +63,7 @@
         - cockpit-docker
         # - cockpit-machines
         - cockpit-pcp
-
-    - name: ensure service is running
+    - name: ensure Cockpit service is running
       service:
         name: cockpit
         enabled: yes
