@@ -1,3 +1,6 @@
 [submodule "docker/bitnami-docker-etcd"]
 	path = docker/bitnami-docker-etcd
 	url = git@github.com:bitnami/bitnami-docker-etcd.git
+[submodule "docker/traefik-letsencrypt-compose"]
+	path = docker/traefik-letsencrypt-compose
+	url = git@github.com:jclaveau/traefik-letsencrypt-compose.git

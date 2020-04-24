@@ -172,25 +172,33 @@
   tags:
     - traefik
   tasks:
+    - name: Inspect network
+      shell: docker network inspect traefik-public
+      failed_when: false
+      register: traefik_public_network_result
     - name: Create Traefik's network (docker_network doesn't work with swarm)
       shell: docker network create -d overlay traefik-public
       run_once: true
-      when: 
+      when: "(traefik_public_network_result.stderr.find('Error: No such network: traefik-public') == -1)"
+      
+    - name: Ensure /docker/traefik-letsencrypt-compose/ exists
+      file: "path=/docker/traefik-letsencrypt-compose/ state=directory mode=0775"
+    - name: Ensure /mnt/gluster/letsencrypt exists
+      file: "path=/mnt/gluster/letsencrypt state=directory mode=0775"
     - name: Send docker-compose.yml
       copy:
-        src: ./docker/traefik/docker-compose.yml
-        dest: /docker/traefik/docker-compose.yml
+        src: ./docker/traefik-letsencrypt-compose/docker-compose.yml
+        dest: /docker/traefik-letsencrypt-compose/docker-compose.yml
     - name: Deploy traefik
       docker_stack:
         state: present
-        name: infrastructure
+        name: traefik
         compose:
-          - /docker/traefik/docker-compose.yml
+          - /docker/traefik-letsencrypt-compose/docker-compose.yml
       run_once: true
       environment:
-        DOMAIN: ***
-        USERNAME: ***
-        EMAIL: ***
-        HASHED_PASSWORD: ***** # export HASHED_PASSWORD=$(openssl passwd -apr1 $PASSWORD)
-        CONSUL_REPLICAS: 2
-        TRAEFIK_REPLICAS: 2
+        DOMAIN: "{{ admin_domain }}"
+        TRAEFIK_USER: "{{ admin_user }}"
+        EMAIL: "{{ admin_email }}"
+        TRAEFIK_PASSWORD_HASH: "{{ traefik_admin_hashed_password }}" #  htpasswd -nBC 10 yout_username
+        LETS_ENCRYPT_STORAGE_PATH: /mnt/gluster/letsencrypt
