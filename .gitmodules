@@ -4,3 +4,6 @@
 [submodule "docker/traefik-letsencrypt-compose"]
 	path = docker/traefik-letsencrypt-compose
 	url = git@github.com:jclaveau/traefik-letsencrypt-compose.git
+[submodule "ansible/mitogen"]
+	path = ansible/mitogen
+	url = git@github.com:dw/mitogen.git
