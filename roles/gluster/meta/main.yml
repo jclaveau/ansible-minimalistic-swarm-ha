@@ -1,0 +1,5 @@
+---
+# meta file for gluster role
+dependencies:
+  # - { role: geerlingguy.glusterfs, transport_config: ... }
+  - { role: geerlingguy.glusterfs }

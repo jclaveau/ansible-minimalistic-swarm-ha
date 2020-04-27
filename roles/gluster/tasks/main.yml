@@ -1,0 +1,56 @@
+# - name: Check if OVH plugin exists
+  # command: dpkg-query -l python3-certbot-dns-ovh
+  # register: plugin_check
+  # failed_when: false
+    
+# - include_tasks: certbot_admin-domain_debian.yml
+  # when: plugin_check.stderr.find('no packages found') == -1
+
+- name: Add hosts from inventory to /etc/hosts
+  tags:
+    - hosts
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      {% for host in groups['all'] %}
+      {% if hostvars[host]['ansible_host'] == ansible_default_ipv4.address %}
+      127.0.0.1 {{ host }}
+      {% else %}
+      {{ hostvars[host]['ansible_host'] }} {{ host }}
+      {% endif %}
+      {% endfor %}
+
+- name: Ensure Gluster brick and mount directories exist.
+  file: "path={{ item }} state=directory mode=0775"
+  with_items:
+    - "{{ gluster_brick_dir }}"
+    - "{{ gluster_mount_dir }}"
+
+- name: Configure Gluster volume.
+  # debugger: on_failed
+  gluster_volume:
+    state: present
+    name: "{{ gluster_brick_name }}"
+    brick: "{{ gluster_brick_dir }}"
+    replicas: "{{ gluster_replicas }}"
+    cluster: "{{ ansible_play_hosts_all | join(',') }}"
+    host: "{{ inventory_hostname }}"
+    quota: "{{ inventory_hostname }}"
+    force: yes # allow the volume to be on the / partition
+  run_once: true
+
+# - name: Ensure Gluster volume is mounted.
+  # mount:
+    # name: "{{ gluster_mount_dir }}"
+    # src: "{{ inventory_hostname }}:/{{ gluster_brick_name }}"
+    # fstype: glusterfs
+    # opts: "defaults,_netdev"
+    # state: mounted
+
+# Local mount
+# umount /mnt
+# chown -R username /etc/fstab /mnt
+# chown -R username /mnt 
+# echo 'localhost:/swarm-gfs /mnt glusterfs defaults,_netdev,backupvolfile-server=localhost 0 0' >> /etc/fstab 
+# mount.glusterfs localhost:/swarm-gfs /mnt 
+# chown -R username:docker /mnt
