@@ -1,0 +1,54 @@
+version: '3.2'
+# see: https://portainer.readthedocs.io/en/latest/deployment.html
+# $ curl -L https://downloads.portainer.io/portainer-agent-stack.yml -o portainer-agent-stack.yml
+# $ docker stack deploy --compose-file=portainer-agent-stack.yml portainer
+
+services:
+  agent:
+    image: portainer/agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    networks:
+      - agent_network
+    deploy:
+      mode: global
+      placement:
+        constraints: [node.platform.os == linux]
+
+  portainer:
+    image: portainer/portainer
+    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    ports:
+      - "9000:9000"
+      - "8000:8000"
+    volumes:
+      # - portainer_data:/data
+      - type: bind
+        source: ${PORTAINER_DATA_PATH} # Place it on a Gluster replicated volume
+        target: /data
+    networks:
+      - agent_network
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - "traefik.docker.network=traefik-public"
+        - "traefik.enable=true"
+        - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+        # Http
+        - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN?Variable DOMAIN not set}`)"
+        - "traefik.http.routers.portainer.entrypoints=http,https"
+        # Enable Let's encrypt auto certificat creation
+        - "traefik.http.routers.portainer.tls.certresolver=certbot"
+networks:
+  agent_network:
+    driver: overlay
+    attachable: true
+  traefik-public:
+    external: true
+
+# volumes:
+  # portainer_data:

@@ -1,0 +1,7 @@
+- name: Check if OVH plugin exists
+  command: dpkg-query -l python3-certbot-dns-ovh
+  register: plugin_check
+  failed_when: false
+    
+- include_tasks: certbot_admin-domain_debian.yml
+  when: plugin_check.stderr.find('no packages found') == -1

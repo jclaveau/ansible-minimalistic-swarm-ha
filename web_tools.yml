@@ -1,0 +1,73 @@
+
+- hosts: gluster
+  tags:
+    - certbot
+  roles:
+    - certbot
+    
+- hosts: gluster
+  tags:
+    - traefik
+  tasks:
+    - name: Install python needs
+      package:
+        name: "{{ item }}"
+      with_items:
+        - python3-jsondiff
+    - name: Inspect network
+      shell: docker network inspect traefik-public
+      failed_when: false
+      register: traefik_public_network_result
+    - name: Create Traefik's network (docker_network doesn't work with swarm)
+      shell: docker network create -d overlay traefik-public
+      run_once: true
+      when: "(traefik_public_network_result.stderr.find('Error: No such network: traefik-public') != -1)"
+      
+    - name: Ensure /docker/traefik-letsencrypt-compose/ exists
+      file: "path=/docker/traefik-letsencrypt-compose/ state=directory mode=0775"
+    - name: Ensure /mnt/gluster/letsencrypt exists
+      file: "path=/mnt/gluster/letsencrypt state=directory mode=0775"
+    - name: Send docker-compose.yml
+      copy:
+        src: ./docker/traefik-letsencrypt-compose/traefik-stack-docker-compose.yml
+        dest: /docker/traefik-letsencrypt-compose/traefik-stack-docker-compose.yml
+
+    - name: Remove Traefik's stack
+      docker_stack:
+        name: traefik
+        state: absent
+        
+    - name: Deploy traefik
+      docker_stack:
+        state: present
+        name: traefik
+        compose:
+          - /docker/traefik-letsencrypt-compose/traefik-stack-docker-compose.yml
+      run_once: true
+      environment:
+        DOMAIN: "{{ admin_domain }}"
+        TRAEFIK_USER: "{{ admin_user }}"
+        EMAIL: "{{ admin_email }}"
+        HASHED_PASSWORD: "{{ traefik_admin_hashed_password }}" #  htpasswd -nBC 10 yout_username
+        LETS_ENCRYPT_STORAGE_PATH: /mnt/gluster/letsencrypt
+
+- hosts: gluster
+  tags:
+    - portainer
+  tasks:
+    - name: Ensure /mnt/gluster/letsencrypt exists
+      file: "path=/mnt/gluster/portainer state=directory mode=0775"
+    - name: Send docker-compose.yml
+      copy:
+        src: ./docker/portainer-agent-stack.yml
+        dest: /docker/portainer-agent-stack.yml
+    - name: Deploy Portainer
+      docker_stack:
+        state: present
+        name: portainer
+        compose:
+          - /docker/portainer-agent-stack.yml
+      run_once: true
+      environment:
+        DOMAIN: "{{ admin_domain }}"
+        PORTAINER_DATA_PATH: /mnt/gluster/portainer

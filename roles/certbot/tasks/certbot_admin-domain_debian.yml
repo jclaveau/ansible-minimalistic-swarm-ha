@@ -1,0 +1,21 @@
+- name: Install Certbot and OVH plugin
+  package:
+    name: "{{ item }}"
+  with_items:
+    - certbot
+    - python3-certbot-dns-ovh
+
+- name: Ensure /mnt/gluster/letsencrypt exists
+  file: "path=/mnt/gluster/letsencrypt state=directory mode=0775"
+
+- name: Send certbot_main-domain.sh
+  copy:
+    src: certbot_main-domain.sh
+    dest: /mnt/gluster/letsencrypt/certbot_main-domain.sh
+
+- name: Renew Let's Encrypt certificate of the admin domain
+  cron:
+    name: "run certbot for admin domain"
+    minute: "59"
+    hour: "{{ play_hosts.index(inventory_hostname) + 3 }}"
+    job: "/mnt/gluster/letsencrypt/certbot_main_domain.sh"
