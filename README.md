@@ -1,4 +1,5 @@
-# docker-swarm-cluster
-Templates installing Docker Swarm on dedicated servers.
+# WIP: Playbook of a Minimalistic High Avilability cluster running on Swarm
 
-curl -fsSL "https://raw.githubusercontent.com/jclaveau/docker-swarm-cluster-kimsufi/master/manager-installation.sh?$(date +%s)" | sh
+```
+git clone --recurse-submodules -j8 git@github.com:jclaveau/ansible-minimalistic-swarm-ha.git
+```

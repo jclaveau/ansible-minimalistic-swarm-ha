@@ -7,3 +7,6 @@
 [submodule "ansible/mitogen"]
 	path = ansible/mitogen
 	url = git@github.com:dw/mitogen.git
+[submodule "roles/jclaveau.swarm"]
+	path = roles/jclaveau.swarm
+	url = git@github.com:jclaveau/ansible-role-docker-swarm.git
