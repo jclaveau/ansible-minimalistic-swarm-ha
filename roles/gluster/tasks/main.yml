@@ -20,24 +20,33 @@
       {% endif %}
       {% endfor %}
 
-- name: Ensure Gluster brick and mount directories exist.
-  file: "path={{ item }} state=directory mode=0775"
-  with_items:
-    - "{{ gluster_brick_dir }}"
-    - "{{ gluster_mount_dir }}"
+- name: dbg
+  debug:
+    var: volumes
+
+- name: Ensure Gluster brick directories exist.
+  file: "path={{ item.brick_dir }} state=directory mode=0775"
+  loop: "{{ volumes }}"
+
+- name: Ensure Gluster mount directories exist.
+  file: "path={{ item.mount_dir }} state=directory mode=0775"
+  loop: "{{ volumes }}"
 
 - name: Configure Gluster volume.
   # debugger: on_failed
   gluster_volume:
     state: present
-    name: "{{ gluster_brick_name }}"
-    brick: "{{ gluster_brick_dir }}"
-    replicas: "{{ gluster_replicas }}"
+    name: "{{ item.volume_name }}"
+    brick: "{{ item.brick_dir }}"
+    replicas: "{{ item.replicas }}"
     cluster: "{{ ansible_play_hosts_all | join(',') }}"
     host: "{{ inventory_hostname }}"
     quota: "{{ inventory_hostname }}"
     force: yes # allow the volume to be on the / partition
-  run_once: true
+  # loop: "{{ volumes }}"
+  loop: "{{ volumes }}"
+  # run_once: true
+  
 
 # - name: Ensure Gluster volume is mounted.
   # mount:

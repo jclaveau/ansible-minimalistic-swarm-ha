@@ -106,11 +106,24 @@
   roles:
     - gluster
   vars:
-    # gluster_mount_dir: /mnt/gluster
-    # gluster_brick_dir: /srv/gluster/brick
-    # gluster_brick_name: swarm-shared-volume
-    # gluster_replicas: 2
-    gluster_mount_dir: /mnt/gluster_test
-    gluster_brick_dir: /srv/gluster/brick_test
-    gluster_brick_name: test-shared-volume
-    gluster_replicas: 2
+    volumes:
+      - volume_name: test-shared-volume
+        mount_dir: /mnt/gluster_test
+        brick_dir: /srv/gluster/brick_test
+        replicas: 2
+      # - volume_name: swarm-shared-volume
+        # mount_dir: /mnt/gluster
+        # brick_dir: /srv/gluster/brick
+        # replicas: 2
+      # - volume_name: admin-everywhere
+        # mount_dir: /mnt/gluster-admin-everywhere
+        # brick_dir: /srv/gluster/admin-everywhere
+        # replicas: "{{ ansible_play_hosts_all | length }}" # everywhere
+      # - volume_name: apps-everywhere
+        # mount_dir: /mnt/gluster-apps-everywhere
+        # brick_dir: /srv/gluster/apps-everywhere
+        # replicas: "{{ ansible_play_hosts_all | length }}" # everywhere
+      # - volume_name: apps-saved
+        # mount_dir: /mnt/gluster-apps-saved
+        # brick_dir: /srv/gluster/apps-saved
+        # replicas: 2
