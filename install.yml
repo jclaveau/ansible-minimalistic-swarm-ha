@@ -123,15 +123,18 @@
         brick_dir: /srv/gluster/brick
         replicas: 2
         state: absent
-      # - volume_name: admin-everywhere
-        # mount_dir: /mnt/gluster-admin-everywhere
-        # brick_dir: /srv/gluster/admin-everywhere
-        # replicas: "{{ ansible_play_hosts_all | length }}" # everywhere
-      # - volume_name: apps-everywhere
-        # mount_dir: /mnt/gluster-apps-everywhere
-        # brick_dir: /srv/gluster/apps-everywhere
-        # replicas: "{{ ansible_play_hosts_all | length }}" # everywhere
-      # - volume_name: apps-saved
-        # mount_dir: /mnt/gluster-apps-saved
-        # brick_dir: /srv/gluster/apps-saved
-        # replicas: 2
+      - volume_name: admin-everywhere
+        mount_dir: /mnt/gluster-admin-everywhere
+        brick_dir: /srv/gluster/admin-everywhere
+        replicas: "{{ ansible_play_hosts_all | length }}" # everywhere
+        state: present
+      - volume_name: apps-everywhere
+        mount_dir: /mnt/gluster-apps-everywhere
+        brick_dir: /srv/gluster/apps-everywhere
+        replicas: "{{ ansible_play_hosts_all | length }}" # everywhere
+        state: present
+      - volume_name: apps-saved
+        mount_dir: /mnt/gluster-apps-saved
+        brick_dir: /srv/gluster/apps-saved
+        replicas: 2
+        state: present

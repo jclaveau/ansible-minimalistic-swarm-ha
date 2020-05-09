@@ -51,7 +51,7 @@
     # quota: "{{ inventory_hostname }}"
     force: yes # allow the volume to be on the / partition
   loop: "{{ volumes }}"
-  # run_once: true
+  run_once: true
 
 # mount.glusterfs localhost:/swarm-shared-volume /mnt/gluster   
 - name: Ensure Gluster volume is mounted.
