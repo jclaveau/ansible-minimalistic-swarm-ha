@@ -1,3 +1,33 @@
+- hosts: all
+  tags:
+    - tools
+  tasks:
+    - name: Install common tools
+      package:
+        name: "{{ item }}"
+      with_items:
+        - apt-transport-https 
+        - ca-certificates
+        - software-properties-common
+        - gnupg
+        - net-tools
+        - nmap
+        - locate
+        - nano
+        - htop
+        - wget
+        - curl
+        - unzip
+        - zip
+
+- hosts: all
+  vars:
+    backports_distribution: "{{ansible_distribution_release}}"
+  roles:
+    - jnv.debian-backports
+  tags:
+    - backports
+
 # https://github.com/geerlingguy/ansible-role-docker
 - hosts: all
   vars:
@@ -33,37 +63,13 @@
     
 - hosts: all
   tags:
-    - tools
-  tasks:
-    - name: Install common tools
-      package:
-        name: "{{ item }}"
-      with_items:
-        - ca-certificates
-        - software-properties-common
-        - gnupg
-        - net-tools
-        - nmap
-        - locate
-        - nano
-        - htop
-        - wget
-        - curl
-        - unzip
-        - zip
-
-- hosts: all
-  tags:
     - cockpit
   tasks:
     - name: Install Cockpit packages
-      package:
-        name: "{{ item }}"
-      with_items:
-        - cockpit
-        - cockpit-docker
-        # - cockpit-machines
-        - cockpit-pcp
+      apt:
+        name: ['cockpit', 'cockpit-docker', 'cockpit-pcp'] # - cockpit-machines
+        default_release: "{{ansible_distribution_release}}-backports"
+        state: latest
     - name: ensure Cockpit service is running
       service:
         name: cockpit
