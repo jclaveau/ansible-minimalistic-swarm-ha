@@ -117,10 +117,12 @@
         mount_dir: /mnt/gluster_test
         brick_dir: /srv/gluster/brick_test
         replicas: 2
-      # - volume_name: swarm-shared-volume
-        # mount_dir: /mnt/gluster
-        # brick_dir: /srv/gluster/brick
-        # replicas: 2
+        state: present
+      - volume_name: swarm-shared-volume
+        mount_dir: /mnt/gluster
+        brick_dir: /srv/gluster/brick
+        replicas: 2
+        state: absent
       # - volume_name: admin-everywhere
         # mount_dir: /mnt/gluster-admin-everywhere
         # brick_dir: /srv/gluster/admin-everywhere

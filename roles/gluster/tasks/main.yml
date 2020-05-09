@@ -32,34 +32,41 @@
   file: "path={{ item.mount_dir }} state=directory mode=0775"
   loop: "{{ volumes }}"
 
+# If reinstall
+# stop gluster
+# compare gluster uuid to the connected peers in the cluster
+# flush /var/lib/glusterd, keeping only glusterd.info with the right id
+# start gluster service
+# remount volumes
+
 - name: Configure Gluster volume.
   # debugger: on_failed
   gluster_volume:
-    state: present
+    state: "{{ item.state | default('present') }}"
     name: "{{ item.volume_name }}"
     brick: "{{ item.brick_dir }}"
     replicas: "{{ item.replicas }}"
     cluster: "{{ ansible_play_hosts_all | join(',') }}"
     host: "{{ inventory_hostname }}"
-    quota: "{{ inventory_hostname }}"
+    # quota: "{{ inventory_hostname }}"
     force: yes # allow the volume to be on the / partition
-  # loop: "{{ volumes }}"
   loop: "{{ volumes }}"
   # run_once: true
-  
 
-# - name: Ensure Gluster volume is mounted.
-  # mount:
-    # name: "{{ gluster_mount_dir }}"
-    # src: "{{ inventory_hostname }}:/{{ gluster_brick_name }}"
-    # fstype: glusterfs
-    # opts: "defaults,_netdev"
-    # state: mounted
-
-# Local mount
-# umount /mnt
-# chown -R username /etc/fstab /mnt
-# chown -R username /mnt 
-# echo 'localhost:/swarm-gfs /mnt glusterfs defaults,_netdev,backupvolfile-server=localhost 0 0' >> /etc/fstab 
-# mount.glusterfs localhost:/swarm-gfs /mnt 
-# chown -R username:docker /mnt
+# mount.glusterfs localhost:/swarm-shared-volume /mnt/gluster   
+- name: Ensure Gluster volume is mounted.
+  mount:
+    name: "{{ item.mount_dir }}"
+    src: "{{ inventory_hostname }}:/{{ item.volume_name }}"
+    fstype: glusterfs
+    opts: "defaults,_netdev"
+    state: mounted
+  when: item.state | default('present') == "present"
+  loop: "{{ volumes }}"
+    
+# ls: cannot access '/mnt/gluster': Transport endpoint is not connected
+- name: Ensure Gluster volume is available.
+  shell: "ls {{ item.mount_dir }}"
+  loop: "{{ volumes }}"
+  register: ls_result
+  failed_when: "'Transport endpoint is not connected' in ls_result.stderr"
