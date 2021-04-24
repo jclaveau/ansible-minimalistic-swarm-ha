@@ -1,0 +1,98 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+ENV['VAGRANT_DEFAULT_PROVIDER'] = 'libvirt'
+
+# Check required plugins
+REQUIRED_PLUGINS_LIBVIRT = %w(vagrant-libvirt)
+exit unless REQUIRED_PLUGINS_LIBVIRT.all? do |plugin|
+  Vagrant.has_plugin?(plugin) || (
+    puts "The #{plugin} plugin is required. Please install it with:"
+    puts "$ vagrant plugin install #{plugin}"
+    false
+  )
+end
+
+Vagrant.configure("2") do |config|
+
+  # node1 VM
+  config.vm.define "amsh-1" do |node1|
+    node1.vm.hostname = "amsh-1"
+    node1.vm.box = "debian/buster64"
+    node1.vm.box_check_update = false
+    node1.vm.synced_folder '.', '/vagrant', :disabled => true
+    node1.vm.provider :libvirt do |domain|
+      domain.memory = 1024
+      domain.nested = true
+      domain.storage :file, :size => '1G'
+    end
+    
+    # https://github.com/hashicorp/vagrant/issues/9144
+    node1.vm.provision :shell, inline: <<-SHELL
+    sed -ie 's/^PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    sed -ie 's/^#MaxAuthTries.*/MaxAuthTries 100/g' /etc/ssh/sshd_config
+    service sshd reload
+    echo "--> Server reporting for duty."
+SHELL
+
+  end
+
+  # node2 VM
+  config.vm.define "amsh-2" do |node2|
+    node2.vm.hostname = "amsh-2"
+    node2.vm.box = "debian/buster64"
+    node2.vm.box_check_update = false
+    node2.vm.synced_folder '.', '/vagrant', :disabled => true
+    node2.vm.provider :libvirt do |domain|
+      domain.memory = 1024
+      domain.nested = true
+      domain.storage :file, :size => '1G'
+    end
+    node2.vm.provision :shell, inline: <<-SHELL
+    sed -ie 's/^PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    sed -ie 's/^#MaxAuthTries.*/MaxAuthTries 100/g' /etc/ssh/sshd_config
+    service sshd reload
+    echo "--> Server reporting for duty."
+SHELL
+  end
+
+  # node3 VM
+  config.vm.define "amsh-3" do |node3|
+    node3.vm.hostname = "amsh-3"
+    node3.vm.box = "debian/buster64"
+    node3.vm.box_check_update = false
+    node3.vm.synced_folder '.', '/vagrant', :disabled => true
+    node3.vm.provider :libvirt do |domain|
+      domain.memory = 1024
+      domain.nested = true
+      domain.storage :file, :size => '1G'
+    end
+    node3.vm.provision :shell, inline: <<-SHELL
+    sed -ie 's/^PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    sed -ie 's/^#MaxAuthTries.*/MaxAuthTries 100/g' /etc/ssh/sshd_config
+    service sshd reload
+    echo "--> Server reporting for duty."
+SHELL
+  end
+
+  # node4 VM
+  config.vm.define "amsh-4" do |node4|
+    node4.vm.hostname = "amsh-4"
+    node4.vm.box = "debian/buster64"
+    node4.vm.box_check_update = false
+    node4.vm.synced_folder '.', '/vagrant', :disabled => true
+    node4.vm.provider :libvirt do |domain|
+      domain.memory = 1024
+      domain.nested = true
+      domain.storage :file, :size => '1G'
+    end
+    node4.vm.provision :shell, inline: <<-SHELL
+    sed -ie 's/^PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    sed -ie 's/^#MaxAuthTries.*/MaxAuthTries 100/g' /etc/ssh/sshd_config
+    service sshd reload
+    echo "--> Server reporting for duty."
+SHELL
+  end
+
+end
+ 

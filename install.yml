@@ -1,6 +1,7 @@
 - hosts: all
   tags:
     - tools
+  become: yes
   tasks:
     - name: Install common tools
       package:
@@ -21,6 +22,7 @@
         - zip
 
 - hosts: all
+  become: yes
   vars:
     backports_distribution: "{{ansible_distribution_release}}"
   roles:
@@ -56,6 +58,13 @@
       - "7946"  # docker container network discovery udp
       - "4789"  # docker container ingress network
       # - "4567"  # galera in case of for multicast
+  become: yes
+  tasks:
+    - name: Iptables
+      package:
+        name: "{{ item }}"
+      with_items:
+        - iptables
   roles:
     - geerlingguy.firewall
   tags:
@@ -64,12 +73,13 @@
 - hosts: all
   tags:
     - cockpit
+  become: yes
   tasks:
     - name: Install Cockpit packages
       apt:
         name: ['cockpit', 'cockpit-docker', 'cockpit-pcp'] # - cockpit-machines
-        default_release: "{{ansible_distribution_release}}-backports"
-        state: latest
+        # default_release: "{{ansible_distribution_release}}-backports"
+        # state: latest
     - name: ensure Cockpit service is running
       service:
         name: cockpit
