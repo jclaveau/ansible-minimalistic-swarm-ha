@@ -39,9 +39,10 @@
 # start gluster service
 # remount volumes
 
+# https://docs.ansible.com/ansible/latest/collections/gluster/gluster/gluster_volume_module.html
 - name: Configure Gluster volume.
-  # debugger: on_failed
-  gluster_volume:
+  debugger: on_failed
+  gluster.gluster.gluster_volume:
     state: "{{ item.state | default('present') }}"
     name: "{{ item.volume_name }}"
     brick: "{{ item.brick_dir }}"
@@ -49,7 +50,8 @@
     cluster: "{{ ansible_play_hosts_all | join(',') }}"
     host: "{{ inventory_hostname }}"
     # quota: "{{ inventory_hostname }}"
-    force: yes # allow the volume to be on the / partition
+    force: yes # allow the volume to be on the / partition 
+    # TODO : configure a dedicated partition
   loop: "{{ volumes }}"
   run_once: true
 
@@ -70,3 +72,32 @@
   loop: "{{ volumes }}"
   register: ls_result
   failed_when: "'Transport endpoint is not connected' in ls_result.stderr"
+
+- name: Get the current timestamp
+  shell: "echo $(date +%T.%N)"
+  register: timestamp
+  run_once: true # possible workaround in case of parallelism issue: when: ansible_hostname == ansible_play_hosts[0]
+
+- name: Create a test file on each volume
+  shell: "echo {{ ansible_play_hosts[0] + ' ' + timestamp.stdout }} > {{ item.mount_dir }}/file_creation_test"
+  run_once: true
+  loop: "{{ volumes }}"
+
+- name: Pause for 1 second to replicate the content on all nodes
+  pause:
+    seconds: 1
+
+- name: Extract the timestamp from every volume on every node
+  slurp:
+    src: "{{ item.mount_dir }}/file_creation_test"
+  register: read_timestamps
+  loop: "{{ volumes }}"
+
+- name: Check that every node has the same timestamp file
+  assert:
+    that:
+      - 'item.content | b64decode == ansible_play_hosts[0] + " " + timestamp.stdout + "\n"'
+    quiet: true
+  with_items: "{{ read_timestamps.results }}"
+
+

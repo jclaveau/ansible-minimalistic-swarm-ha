@@ -29,6 +29,8 @@
     - jnv.debian-backports
   tags:
     - backports
+    - cockpit # required by cockpit
+    - gluster # TOFIX: required by cockpit required by gluster for python lib gnupg2
 
 # https://github.com/geerlingguy/ansible-role-docker
 - hosts: all
@@ -73,6 +75,7 @@
 - hosts: all
   tags:
     - cockpit
+    - gluster # TOFIX: required by gluster for python lib gnupg2
   become: yes
   tasks:
     - name: Install Cockpit packages
@@ -116,23 +119,25 @@
     - swarm
     - swarm-start
 
-- hosts: gluster
+- hosts: all
+# - hosts: gluster
+  become: yes
   tags:
     - gluster
   roles:
     - gluster
   vars:
     volumes:
-      - volume_name: test-shared-volume
-        mount_dir: /mnt/gluster_test
-        brick_dir: /srv/gluster/brick_test
-        replicas: 2
-        state: present
-      - volume_name: swarm-shared-volume
-        mount_dir: /mnt/gluster
-        brick_dir: /srv/gluster/brick
-        replicas: 2
-        state: absent
+      # - volume_name: test-shared-volume
+        # mount_dir: /mnt/gluster_test
+        # brick_dir: /srv/gluster/brick_test
+        # replicas: 2
+        # state: present
+      # - volume_name: swarm-shared-volume
+        # mount_dir: /mnt/gluster
+        # brick_dir: /srv/gluster/brick
+        # replicas: 2
+        # state: absent
       - volume_name: admin-everywhere
         mount_dir: /mnt/gluster-admin-everywhere
         brick_dir: /srv/gluster/admin-everywhere
