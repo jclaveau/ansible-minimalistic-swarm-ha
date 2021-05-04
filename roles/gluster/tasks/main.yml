@@ -20,9 +20,9 @@
       {% endif %}
       {% endfor %}
 
-- name: dbg
-  debug:
-    var: volumes
+# - name: dbg volumes
+#   debug:
+#     var: volumes
 
 - name: Ensure Gluster brick directories exist.
   file: "path={{ item.brick_dir }} state=directory mode=0775"
@@ -32,12 +32,170 @@
   file: "path={{ item.mount_dir }} state=directory mode=0775"
   loop: "{{ volumes }}"
 
+# ------------------------------------------------
+
+# Gathering debug info
+- name: List peer status
+  shell: "gluster peer status | grep 'State:' -B 2 | grep 'Hostname:' | grep -E -o '\\S+$' "
+  register: peers_hostnames
+  ignore_errors: yes # do not fail if the node has no peer
+
+# - name: dbg
+#   ansible.builtin.debug:
+#     var: peers_hostnames
+
+- name: Extract self UUID (differs once a node is destroyed then reprovisionned)
+  shell: "gluster pool list | grep -E 'localhost' | grep -E -o '^\\S+'"
+  register: local_uuid
+
+- name: Storing self uuid from pool list
+  set_fact:
+    peers_status:
+      "{{ peers_status|default([]) | combine({ 
+          ansible_hostname : {
+            'hostname': ansible_hostname,
+            'uuid': local_uuid.stdout,
+            'connected': 'Connected',
+            'state': 'null',
+          }
+        }, recursive=True)
+      }}"
+
+- name: Count peers
+  shell: "gluster peer status | grep 'Number of Peers:'  | grep -E -o '[0-9]+'"
+  register: peers_count
+
+- name: Gather peers ips
+  shell: "dig {{ item }} +short"
+  register: peers_ips
+  # with_items: "{{ ansible_play_batch }}"
+  with_items: "{{ peers_hostnames.stdout_lines + [ansible_hostname] }}"
+
+# - name: dbg
+#   ansible.builtin.debug:
+#     var: peers_ips
+
+- name: Storing peer ips as fact
+  # no_log: True
+  set_fact:
+    peers_status:
+      "{{ peers_status|default([]) | combine({ 
+          item.item : {
+            'ip': item.stdout,
+          }
+        }, recursive=True)
+      }}"
+  with_items: "{{ peers_ips.results | default([]) }}"
+
+# - name: dbg
+#   ansible.builtin.debug:
+#     var: peers_status
+
+# - name: Example using fail and when together
+#   fail:
+#     msg: lalala
+
+- name: Peers Statuses
+  shell: "gluster peer status | grep 'Hostname: {{ item }}' -A 2 "
+  register: peers_status_raw
+  with_items: "{{ peers_hostnames.stdout_lines }}"
+
+- name: Storing peer statuses as fact
+  # no_log: True
+  set_fact:
+    peers_status:
+      "{{ peers_status|default([]) | combine({ 
+          item.item : {
+            'hostname': item.item,
+            'uuid': item.stdout | regex_search('Uuid: .+$', multiline=True) | regex_search('[^ ]+$'),
+            'state': item.stdout | regex_search('State: .+$', multiline=True) | regex_replace('^State: ', '') | regex_replace(' \\(Connected\\)| \\(Disconnected\\)', ''), 
+            'connected': item.stdout | regex_search('State: .+$', multiline=True) | regex_search('Connected|Disconnected'), 
+          }
+        }, recursive=True)
+      }}"
+  with_items: "{{ peers_status_raw.results | default([]) }}"
+
+# - name: dbg
+#   ansible.builtin.debug:
+#     var: peers_status
+
+# - name: Example using fail and when together
+#   fail:
+#     msg: lalala
+
+- name: Storing peer statuses as common fact
+  set_fact:
+    peers_statuses:
+      "{{ peers_statuses|default([]) | combine({ 
+          item[1] : {
+            'hostname': item[1],
+            'uuids': {
+              hostvars[item[0]].peers_status[item[1]].uuid : [item[0]]
+            },
+            'state': {
+              hostvars[item[0]].peers_status[item[1]].state : [item[0]]
+            },
+            'connected': {
+              hostvars[item[0]].peers_status[item[1]].connected : [item[0]]
+            },
+            'ips': {
+              hostvars[item[0]].peers_status[item[1]].ip : [item[0]]
+            },
+            'peers_count': hostvars[item[1]].peers_count.stdout,
+          }
+        }, recursive=True, list_merge='append_rp') if item[1] in hostvars[item[0]].peers_status else peers_statuses 
+      }}"
+  with_nested: 
+    - "{{ ansible_play_batch }}"
+    - "{{ ansible_play_batch }}"
+    # - ['uuid', 'state', 'connected', 'ips']
+  run_once: true
+
+- name: peers_statuses 
+  ansible.builtin.debug:
+    var: peers_statuses
+  run_once: true
+
+
+# - name: Example using fail and when together
+#   fail:
+#     msg: lalala
+
+
+# TODO volumes
+# TODO connected_for / disconncted_for
+# TODO states.rejected_for
+# TODO states.in_cluster_for
+
+# ------------------------------------------------
+- name: Testing ips consistency
+  fail:
+    msg: "Networking inconsistency: multiple ips for host {{ item }} : {{ peers_statuses[item].ips }}"
+  when: peers_statuses[item].ips | length() != 1
+  run_once: True
+  with_items: "{{ ansible_play_batch }}"
+
+# - name: Testing connection state
+#   fail:
+#     msg: "Networking inconsistency: multiple ips for host {{ item }} : {{ peers_statuses[item].state }}"
+#   when: peers_statuses[item].state.Disconnected | length() != 0
+#   run_once: True
+#   with_items: "{{ ansible_play_batch }}"
+
+- name: Example using fail and when together
+  fail:
+    msg: lalala
+
+# tests : connected from every node => if node wait and retry, after a given amount of trial, send a notification
+# tests : peer in cluster from every node => if one peer is rejected, its id mismatches and it has no local volume, reset its config and auto-read it
+
 # If reinstall
 # stop gluster
 # compare gluster uuid to the connected peers in the cluster
 # flush /var/lib/glusterd, keeping only glusterd.info with the right id
 # start gluster service
 # remount volumes
+
 
 # https://docs.ansible.com/ansible/latest/collections/gluster/gluster/gluster_volume_module.html
 - name: Configure Gluster volume.
@@ -54,6 +212,67 @@
     # TODO : configure a dedicated partition
   loop: "{{ volumes }}"
   run_once: true
+
+
+- name: Look for rejected peers (occurs when reprovisionning a destroyed node with the same hostname as before)
+  shell: "gluster peer status | grep 'Peer Rejected' -B 2 | grep 'Hostname:' | grep -E -o '\\S+$' "
+  register: rejected_peers
+
+- name: dbg
+  ansible.builtin.debug:
+    var: rejected_peers
+
+
+
+- name: Check if the UUID is different on the rejected peer
+  shell: "gluster peer status | grep 'Peer Rejected' -B 2 | grep 'Hostname:' | grep -E -o '\\S+$' "
+  register: rejected_peers
+
+
+# list existing volumes
+- name: List existing volumes
+  shell: "gluster volume list"
+  register: existing_volumes
+
+- name: dbg
+  ansible.builtin.debug:
+    var: existing_volumes
+
+# list rejected bricks by volume
+# - name: Look for rejected bricks (bricks located on a rejected peer)
+#   shell: "gluster volume info {{ item[0] }} | grep -E 'Brick[0-9]+: {{ item[1] }}' | grep -E -o '[^ ]+$'"
+#   register: rejected_bricks
+#   with_nested: 
+#     - "{{ existing_volumes.stdout_lines }}"
+#     - "{{ rejected_peers.stdout_lines }}"
+
+# - name: dbg bricks
+#   ansible.builtin.debug:
+#     var: rejected_bricks
+
+# - name: Remove rejected bricks
+#   shell: "gluster volume reset-brick {{ item.item[0] }} {{ item.stdout }} start"
+#   with_items: "{{ rejected_bricks.results }}" => needs to remove good number of bricks based on replicas count => painful
+
+# TODO test avec deux rejets
+# TODO test si on perd le noeud qui a fait les peer probe (perte des notifications entre peers?)
+
+
+# reset the node
+# service glusterd stop
+# cd /var/lib/glusterd/
+# rm -rf !(glusterd.info)
+# sed -e 's/UUID=.*$/UUID=4e6e4fb2-6fde-4b67-a52c-2b8b7a735057/g' -i glusterd.info
+# service glusterd start
+# gluster peer probe node0 # probe from first node?
+# service glusterd restart
+
+
+
+- name: Example using fail and when together
+  fail:
+    msg: lalala
+
 
 # mount.glusterfs localhost:/swarm-shared-volume /mnt/gluster   
 - name: Ensure Gluster volume is mounted.
