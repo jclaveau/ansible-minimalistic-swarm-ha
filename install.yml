@@ -1,5 +1,15 @@
 - hosts: all
   tags:
+    - tools # Some tools are not found without apt update before
+  become: yes
+  tasks:
+    - name: Update the repository cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+- hosts: all
+  tags:
     - tools
   become: yes
   tasks:
